@@ -1,4 +1,5 @@
 using TaskTracker.Enums;
+using TaskTracker.Services;
 
 namespace TaskTracker.Models;
 
@@ -46,6 +47,5 @@ public class TeamTask
             NewStatus = newStatus,
             AssignedTo = AssignedTo
         });
-    }
     }
 };

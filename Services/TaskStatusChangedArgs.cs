@@ -1,10 +1,14 @@
-public class TaskStatusChangedArgs : EventArgs
-{
-    public int TaskId { get; init; }
-    public string Title { get; init; } = string.Empty;
+using TaskTracker.Enums;
 
-    public WorkItemStatus OldStatus { get; init; }
-    public WorkItemStatus NewStatus { get; init; }
+namespace TaskTracker.Services;
 
-    public string? AssignedTo { get; init; }
-}
+    public class TaskStatusChangedArgs : EventArgs
+    {
+        public int TaskId { get; init; }
+        public string Title { get; init; } = string.Empty;
+
+        public WorkItemStatus OldStatus { get; init; }
+        public WorkItemStatus NewStatus { get; init; }
+
+        public string? AssignedTo { get; init; }
+    }
