@@ -40,6 +40,11 @@ public class TeamTask
         // Raise the event if subscribers exist
         StatusChanged?.Invoke(this, new TaskStatusChangedArgs
         {
+            TaskId = Id,
+            Title = Title,
+            OldStatus = oldStatus,
+            NewStatus = newStatus,
+            AssignedTo = AssignedTo
         });
     }
     }
