@@ -9,7 +9,7 @@ public class AuditLogger
     public void OnStatusChanged(object? sender, TaskStatusChangedArgs e)
     {
         Log.Add(
-            $"[{DateTime.Now:yyyy-MM-dd HH:mm}] Task #{eventArgs.TaskId} \"{eventArgs.Title}\": {oldStatus} → {newStatus}"
+            $@"[{DateTime.Now:yyyy-MM-dd HH:mm}] Task #{eventArgs.TaskId} ""{eventArgs.Title}"": {eventArgs.OldStatus} → {eventArgs.NewStatus}"
         );
     }
 }
