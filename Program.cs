@@ -1,34 +1,131 @@
 using TaskTracker.Enums;
 using TaskTracker.Models;
 using TaskTracker.Services;
+using TaskTracker.Api;
+using TaskTracker.Api.Models;
 
-var task = new TeamTask
-{
-    Title = "Fix Output",
-    Description = "Output value not showing"
-};
+// Builder/Registration logic
+var builder = WebApplication.CreateBuilder(args);
 
-// Audit logger logic
-var auditLogger = new AuditLogger();
-task.StatusChanged += auditLogger.OnStatusChanged;
-task.StatusChanged += (sender, eventArgs) =>
-{
-    Console.WriteLine($"[Notify] \"{eventArgs.Title}\" is now {eventArgs.NewStatus}");
-};
-task.StatusChanged += (sender, eventArgs) =>
-{
-    if (eventArgs.NewStatus == WorkItemStatus.Done)
+builder.Services.AddSingleton<TaskStore>();
+builder.Services.AddSingleton<AuditLogger>();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.MapPost("/api/tasks",
+    (
+        CreateTaskRequest request,
+        TaskStore store,
+        AuditLogger auditLogger
+    ) =>
     {
-        var name = string.IsNullOrWhiteSpace(eventArgs.AssignedTo)
-            ? "someone"
-            : eventArgs.AssignedTo;
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            return Results.BadRequest(new
+            {
+                message = "Title cannot be empty or whitespace"
+            });
+        }
 
-        Console.WriteLine($"\"{eventArgs.Title}\" marked as Done by {name}");
+        var task = new TeamTask
+        {
+            Title = request.Title,
+            Description = request.Description,
+            DueDate = request.DueDate
+        };
+
+        store.Add(task);
+
+        task.StatusChanged += auditLogger.OnStatusChanged;
+
+        return Results.Created($"/api/tasks/{task.Id}", task);
+    });
+
+app.MapGet("/api/tasks", (TaskStore store) =>
+{
+    return Results.Ok(store.GetAll());
+});
+
+app.MapGet("/api/tasks/{id}", (int id, TaskStore store) =>
+{
+    var task = store.GetById(id);
+
+    if (task is null)
+    {
+        return Results.NotFound(new
+        {
+            message = $"Task {id} was not found"
+        });
     }
-};
+    return Results.Ok(task);
+});
 
-// Test
-task.Assign("Alice");
-task.Transition(WorkItemStatus.InProgress);
-task.Transition(WorkItemStatus.InReview);
-task.Transition(WorkItemStatus.Done);
+app.MapPatch("/api/tasks/{id}/assign",
+    (
+        int id,
+        AssignRequest request,
+        TaskStore store
+    ) =>
+    {
+        var task = store.GetById(id);
+
+        if (task is null)
+        {
+            return Results.NotFound(new
+            {
+                message = $"Task {id} was not found"
+            });
+        }
+
+        task.Assign(request.User);
+
+        return Results.NoContent();
+    });
+
+app.MapPatch("/api/tasks/{id}/status",
+    (
+        int id,
+        TransitionRequest request,
+        TaskStore store
+    ) =>
+    {
+        var task = store.GetById(id);
+
+        if (task is null)
+        {
+            return Results.NotFound(new
+            {
+                message = $"Task {id} was not found"
+            });
+        }
+
+        if (task.Status == request.NewStatus)
+        {
+            return Results.BadRequest(new
+            {
+                message = $"Task already has status: '{request.NewStatus}'"
+            });
+        }
+
+        task.Transition(request.NewStatus);
+
+        return Results.NoContent();
+    });
+
+app.MapGet("/api/tasks/overdue", (TaskStore store) =>
+{
+    var overdueTasks = store
+        .GetAll()
+        .Where(task => task.IsOverdue)
+        .ToList();
+
+    return Results.Ok(overdueTasks);
+});
+
+app.Run();
