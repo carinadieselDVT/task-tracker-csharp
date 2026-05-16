@@ -47,3 +47,17 @@ app.MapPost("/api/tasks",
     {
         return Results.Ok(store.GetAll());
     });
+    
+    app.MapGet("/api/tasks/{id}", (int id, TaskStore store) =>
+    {
+        var task = store.GetById(id);
+
+        if (task is null)
+        {
+            return Results.NotFound(new
+            {
+                message = $"Task {id} was not found"
+            });
+        }
+        return Results.Ok(task);
+    });
