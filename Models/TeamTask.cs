@@ -1,4 +1,5 @@
 using TaskTracker.Enums;
+using TaskTracker.Services;
 
 namespace TaskTracker.Models;
 
@@ -18,6 +19,8 @@ public class TeamTask
     
     public string Label => AssignedTo ?? "Unassigned";
     
+    public event EventHandler<TaskStatusChangedArgs>? StatusChanged;
+    
     public void Assign(string user)
     {
         if (string.IsNullOrWhiteSpace(user))
@@ -30,7 +33,19 @@ public class TeamTask
     {
         if (Status == newStatus)
             return;
-
+        
+        // Capture curr status and then update
+        var oldStatus = Status;
         Status = newStatus;
+
+        // Raise the event if subscribers exist
+        StatusChanged?.Invoke(this, new TaskStatusChangedArgs
+        {
+            TaskId = Id,
+            Title = Title,
+            OldStatus = oldStatus,
+            NewStatus = newStatus,
+            AssignedTo = AssignedTo
+        });
     }
 };

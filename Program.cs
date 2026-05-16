@@ -1,41 +1,34 @@
-var builder = WebApplication.CreateBuilder(args);
+using TaskTracker.Enums;
+using TaskTracker.Models;
+using TaskTracker.Services;
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+var task = new TeamTask
 {
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    Title = "Fix Output",
+    Description = "Output value not showing"
 };
 
-app.MapGet("/weatherforecast", () =>
+// Audit logger logic
+var auditLogger = new AuditLogger();
+task.StatusChanged += auditLogger.OnStatusChanged;
+task.StatusChanged += (sender, eventArgs) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+    Console.WriteLine($"[Notify] \"{eventArgs.Title}\" is now {eventArgs.NewStatus}");
+};
+task.StatusChanged += (sender, eventArgs) =>
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+    if (eventArgs.NewStatus == WorkItemStatus.Done)
+    {
+        var name = string.IsNullOrWhiteSpace(eventArgs.AssignedTo)
+            ? "someone"
+            : eventArgs.AssignedTo;
+
+        Console.WriteLine($"\"{eventArgs.Title}\" marked as Done by {name}");
+    }
+};
+
+// Test
+task.Assign("Alice");
+task.Transition(WorkItemStatus.InProgress);
+task.Transition(WorkItemStatus.InReview);
+task.Transition(WorkItemStatus.Done);
