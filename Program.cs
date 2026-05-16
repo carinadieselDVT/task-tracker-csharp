@@ -3,6 +3,20 @@ using TaskTracker.Models;
 using TaskTracker.Services;
 using TaskTracker.Api;
 
+// Builder/Registration logic
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSingleton<TaskStore>();
+builder.Services.AddSingleton<AuditLogger>();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+
 var task = new TeamTask
 {
     Title = "Fix Output",
@@ -33,10 +47,3 @@ task.Assign("Alice");
 task.Transition(WorkItemStatus.InProgress);
 task.Transition(WorkItemStatus.InReview);
 task.Transition(WorkItemStatus.Done);
-
-// Builder logic
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<TaskStore>();
-
-var app = builder.Build();
-app.Run();
