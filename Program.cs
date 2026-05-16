@@ -27,17 +27,21 @@ app.MapPost("/api/tasks",
     {
         if (string.IsNullOrWhiteSpace(request.Title))
         {
-            return Results.BadRequest("Title cannot be empty.");
+            return Results.BadRequest(new
+            {
+                message = "Title cannot be empty or whitespace"
+            });
         }
-        
+
         var task = new TeamTask
         {
             Title = request.Title,
             Description = request.Description,
             DueDate = request.DueDate
         };
-        
+
         store.Add(task);
+
         task.StatusChanged += auditLogger.OnStatusChanged;
 
         return Results.Created($"/api/tasks/{task.Id}", task);
@@ -61,3 +65,26 @@ app.MapPost("/api/tasks",
         }
         return Results.Ok(task);
     });
+
+    app.MapPatch("/api/tasks/{id}/assign",
+        (
+            int id,
+            AssignRequest request,
+            TaskStore store
+        ) =>
+        {
+            var task = store.GetById(id);
+            
+            if (task is null)
+            {
+                return Results.NotFound(new
+                {
+                    message = $"Task {id} was not found"
+                });
+            }
+            
+            task.Assign(request.User);
+            
+            return Results.NoContent();
+        });
+    
