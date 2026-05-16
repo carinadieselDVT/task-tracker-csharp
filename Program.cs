@@ -42,3 +42,8 @@ app.MapPost("/api/tasks",
 
         return Results.Created($"/api/tasks/{task.Id}", task);
     });
+    
+    app.MapGet("/api/tasks", (TaskStore store) =>
+    {
+        return Results.Ok(store.GetAll());
+    });
