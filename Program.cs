@@ -87,4 +87,34 @@ app.MapPost("/api/tasks",
             
             return Results.NoContent();
         });
+
+    app.MapPatch("/api/tasks/{id}/status",
+        (
+            int id,
+            TransitionRequest request,
+            TaskStore store
+        ) =>
+        {
+            var task = store.GetById(id);
+            
+            if (task is null)
+            {
+                return Results.NotFound(new
+                {
+                    message = $"Task {id} was not found"
+                });
+            }
+            
+            if (task.Status == request.NewStatus)
+            {
+                return Results.BadRequest(new
+                {
+                    message = $"Task already has status: '{request.NewStatus}'"
+                });
+            }
+            
+            task.Transition(request.NewStatus);
+            
+            return Results.NoContent();
+        });
     
