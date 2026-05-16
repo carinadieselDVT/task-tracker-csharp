@@ -46,13 +46,32 @@ app.MapPost("/api/tasks",
 
         return Results.Created($"/api/tasks/{task.Id}", task);
     });
-    
-    app.MapGet("/api/tasks", (TaskStore store) =>
+
+app.MapGet("/api/tasks", (TaskStore store) =>
+{
+    return Results.Ok(store.GetAll());
+});
+
+app.MapGet("/api/tasks/{id}", (int id, TaskStore store) =>
+{
+    var task = store.GetById(id);
+
+    if (task is null)
     {
-        return Results.Ok(store.GetAll());
-    });
-    
-    app.MapGet("/api/tasks/{id}", (int id, TaskStore store) =>
+        return Results.NotFound(new
+        {
+            message = $"Task {id} was not found"
+        });
+    }
+    return Results.Ok(task);
+});
+
+app.MapPatch("/api/tasks/{id}/assign",
+    (
+        int id,
+        AssignRequest request,
+        TaskStore store
+    ) =>
     {
         var task = store.GetById(id);
 
@@ -63,58 +82,50 @@ app.MapPost("/api/tasks",
                 message = $"Task {id} was not found"
             });
         }
-        return Results.Ok(task);
+
+        task.Assign(request.User);
+
+        return Results.NoContent();
     });
 
-    app.MapPatch("/api/tasks/{id}/assign",
-        (
-            int id,
-            AssignRequest request,
-            TaskStore store
-        ) =>
-        {
-            var task = store.GetById(id);
-            
-            if (task is null)
-            {
-                return Results.NotFound(new
-                {
-                    message = $"Task {id} was not found"
-                });
-            }
-            
-            task.Assign(request.User);
-            
-            return Results.NoContent();
-        });
+app.MapPatch("/api/tasks/{id}/status",
+    (
+        int id,
+        TransitionRequest request,
+        TaskStore store
+    ) =>
+    {
+        var task = store.GetById(id);
 
-    app.MapPatch("/api/tasks/{id}/status",
-        (
-            int id,
-            TransitionRequest request,
-            TaskStore store
-        ) =>
+        if (task is null)
         {
-            var task = store.GetById(id);
-            
-            if (task is null)
+            return Results.NotFound(new
             {
-                return Results.NotFound(new
-                {
-                    message = $"Task {id} was not found"
-                });
-            }
-            
-            if (task.Status == request.NewStatus)
+                message = $"Task {id} was not found"
+            });
+        }
+
+        if (task.Status == request.NewStatus)
+        {
+            return Results.BadRequest(new
             {
-                return Results.BadRequest(new
-                {
-                    message = $"Task already has status: '{request.NewStatus}'"
-                });
-            }
-            
-            task.Transition(request.NewStatus);
-            
-            return Results.NoContent();
-        });
-    
+                message = $"Task already has status: '{request.NewStatus}'"
+            });
+        }
+
+        task.Transition(request.NewStatus);
+
+        return Results.NoContent();
+    });
+
+app.MapGet("/api/tasks/overdue", (TaskStore store) =>
+{
+    var overdueTasks = store
+        .GetAll()
+        .Where(task => task.IsOverdue)
+        .ToList();
+
+    return Results.Ok(overdueTasks);
+});
+
+app.Run();
