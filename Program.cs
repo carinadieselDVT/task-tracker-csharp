@@ -1,6 +1,7 @@
 using TaskTracker.Enums;
 using TaskTracker.Models;
 using TaskTracker.Services;
+using TaskTracker.Api;
 
 var task = new TeamTask
 {
@@ -32,3 +33,10 @@ task.Assign("Alice");
 task.Transition(WorkItemStatus.InProgress);
 task.Transition(WorkItemStatus.InReview);
 task.Transition(WorkItemStatus.Done);
+
+// Builder logic
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<TaskStore>();
+
+var app = builder.Build();
+app.Run();
