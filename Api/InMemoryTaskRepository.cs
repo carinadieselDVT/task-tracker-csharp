@@ -1,8 +1,9 @@
+using TaskTracker.Interfaces;
 using TaskTracker.Models;
 
 namespace TaskTracker.Api;
 
-public class TaskStore
+public class InMemoryTaskRepository : ITaskRepository
 {
     private readonly List<TeamTask> _tasks = new();
 
@@ -13,7 +14,7 @@ public class TaskStore
 
     public TeamTask? GetById(int id)
     {
-        return _tasks.FirstOrDefault(task => task.Id == id);
+        return _tasks.FirstOrDefault(t => t.Id == id);
     }
 
     public void Add(TeamTask task)

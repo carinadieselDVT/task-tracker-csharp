@@ -1,14 +1,19 @@
 using TaskTracker.Enums;
 using TaskTracker.Models;
-using TaskTracker.Services;
 using TaskTracker.Api;
-using TaskTracker.Api.Models;
+using TaskTracker.Interfaces;
+using TaskTracker.Notifiers;
+using TaskTracker.Services;
 
 // Builder/Registration logic
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<TaskStore>();
+builder.Services.AddSingleton<ITaskRepository, InMemoryTaskRepository>();
+
 builder.Services.AddSingleton<AuditLogger>();
+
+builder.Services.AddSingleton<INotifier, AuditNotifier>();
+builder.Services.AddSingleton<INotifier, ConsoleNotifier>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -21,8 +26,8 @@ app.UseSwaggerUI();
 app.MapPost("/api/tasks",
     (
         CreateTaskRequest request,
-        TaskStore store,
-        AuditLogger auditLogger
+        ITaskRepository store,
+        IEnumerable<INotifier> notifiers
     ) =>
     {
         if (string.IsNullOrWhiteSpace(request.Title))
@@ -42,17 +47,22 @@ app.MapPost("/api/tasks",
 
         store.Add(task);
 
-        task.StatusChanged += auditLogger.OnStatusChanged;
+        foreach (var notifier in notifiers)
+        {
+            task.StatusChanged += notifier.Notify;
+        }
 
         return Results.Created($"/api/tasks/{task.Id}", task);
     });
 
-app.MapGet("/api/tasks", (TaskStore store) =>
+app.MapGet("/api/tasks",
+    (ITaskRepository store) =>
 {
     return Results.Ok(store.GetAll());
 });
 
-app.MapGet("/api/tasks/{id}", (int id, TaskStore store) =>
+app.MapGet("/api/tasks/{id}",
+    (int id, ITaskRepository store) =>
 {
     var task = store.GetById(id);
 
@@ -63,6 +73,7 @@ app.MapGet("/api/tasks/{id}", (int id, TaskStore store) =>
             message = $"Task {id} was not found"
         });
     }
+
     return Results.Ok(task);
 });
 
@@ -70,7 +81,7 @@ app.MapPatch("/api/tasks/{id}/assign",
     (
         int id,
         AssignRequest request,
-        TaskStore store
+        ITaskRepository store
     ) =>
     {
         var task = store.GetById(id);
@@ -92,7 +103,7 @@ app.MapPatch("/api/tasks/{id}/status",
     (
         int id,
         TransitionRequest request,
-        TaskStore store
+        ITaskRepository store
     ) =>
     {
         var task = store.GetById(id);
@@ -118,7 +129,8 @@ app.MapPatch("/api/tasks/{id}/status",
         return Results.NoContent();
     });
 
-app.MapGet("/api/tasks/overdue", (TaskStore store) =>
+app.MapGet("/api/tasks/overdue",
+    (ITaskRepository store) =>
 {
     var overdueTasks = store
         .GetAll()
