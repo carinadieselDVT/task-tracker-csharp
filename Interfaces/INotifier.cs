@@ -1,4 +1,4 @@
-using TaskTracker.Events;
+using TaskTracker.Services;
 
 namespace TaskTracker.Interfaces
 {
