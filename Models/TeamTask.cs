@@ -1,17 +1,22 @@
 using TaskTracker.Enums;
 using TaskTracker.Services;
+using TaskTracker.Interfaces;
 
 namespace TaskTracker.Models;
 
-public class TeamTask
+public class TeamTask : IAssignable, ITransitionable, ISchedulable
 {
     private static int _nextId = 1;
+
     public int Id { get; } = _nextId++;
 
     public required string Title { get; init; }
     public string? Description { get; init; }
+
     public string? AssignedTo { get; private set; }
+
     public DateTime? DueDate { get; init; }
+
     public WorkItemStatus Status { get; private set; }
 
     public bool IsOverdue =>
@@ -34,11 +39,9 @@ public class TeamTask
         if (Status == newStatus)
             return;
 
-        // Capture curr status and then update
         var oldStatus = Status;
         Status = newStatus;
 
-        // Raise the event if subscribers exist
         StatusChanged?.Invoke(new TaskStatusChangedArgs
         {
             TaskId = Id,
@@ -48,4 +51,4 @@ public class TeamTask
             AssignedTo = AssignedTo
         });
     }
-};
+}
